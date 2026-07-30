@@ -7,6 +7,7 @@ import discord
 from commands.start import handle_start
 from commands.status import handle_status
 from commands.stop import handle_stop
+from scheduler import recover_state
 from state import ServerState
 
 
@@ -31,8 +32,15 @@ def create_bot() -> discord.Bot:
     async def status(ctx: discord.ApplicationContext) -> None:
         await handle_status(ctx, state)
 
+    recovered = False
+
     @bot.event
     async def on_ready() -> None:
+        nonlocal recovered
         print(f"Logged in as {bot.user} — ready.")
+        # on_ready can fire again after a gateway reconnect; only recover once.
+        if not recovered:
+            recovered = True
+            await recover_state(state, bot)
 
     return bot

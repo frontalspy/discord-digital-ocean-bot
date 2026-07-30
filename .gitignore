@@ -1,6 +1,9 @@
 # Environment
 .env
 
+# Persisted runtime state (survives bot restarts, machine-specific)
+server_state.json
+
 # Python
 __pycache__/
 *.py[cod]

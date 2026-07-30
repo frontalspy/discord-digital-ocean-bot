@@ -10,13 +10,19 @@ from state import ServerState
 
 
 async def handle_stop(ctx: discord.ApplicationContext, state: ServerState) -> None:
-    droplet = await asyncio.to_thread(do.get_droplet)
-    if not droplet:
-        await ctx.respond(
-            f"⚠️ No running `{do.get_droplet_name()}` droplet found.", ephemeral=True
-        )
-        return
+    droplet_name = do.get_droplet_name()
 
-    cancel_shutdown(state)
-    await ctx.respond("🛑 Stopping server manually...")
-    await run_shutdown_sequence(state, ctx.channel)
+    # Ack the interaction immediately — the lock below may be held for
+    # minutes by a concurrent start/stop/auto-shutdown.
+    await ctx.respond(f"🔍 Checking status of **{droplet_name}**...")
+    ch = ctx.channel
+
+    async with state.lock:
+        droplet = await asyncio.to_thread(do.get_droplet)
+        if not droplet:
+            await ch.send(f"⚠️ No running `{droplet_name}` droplet found.")
+            return
+
+        cancel_shutdown(state)
+        await ch.send("🛑 Stopping server manually...")
+        await run_shutdown_sequence(state, ch)
