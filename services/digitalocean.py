@@ -9,7 +9,7 @@ import requests
 _BASE = "https://api.digitalocean.com/v2"
 
 
-def getget_droplet_name() -> str:
+def get_droplet_name() -> str:
     return os.environ.get("DO_DROPLET_NAME", "pew-pew")
 
 
