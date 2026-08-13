@@ -62,21 +62,35 @@ def _get_cheapest_size(region: str, min_disk_gb: int) -> dict:
     return min(sizes, key=lambda s: s["price_monthly"])
 
 
+def _get_ssh_key_id(name: str) -> int:
+    r = requests.get(f"{_BASE}/account/keys?per_page=200", headers=_headers())
+    _raise_for_status(r)
+    for key in r.json()["ssh_keys"]:
+        if key["name"] == name:
+            return key["id"]
+    raise RuntimeError(f"No SSH key named {name!r} found on the DigitalOcean account")
+
+
 def create_droplet_from_snapshot(snapshot: dict) -> dict:
     region = snapshot["regions"][0]
     # The target size's disk must be at least as large as the snapshot's
     # min_disk_size, or DigitalOcean rejects the create with a 422.
     size = _get_cheapest_size(region, snapshot["min_disk_size"])
-    r = requests.post(
-        f"{_BASE}/droplets",
-        headers=_headers(),
-        json={
-            "name": get_droplet_name(),
-            "region": region,
-            "size": size["slug"],
-            "image": snapshot["id"],
-        },
-    )
+
+    payload = {
+        "name": get_droplet_name(),
+        "region": region,
+        "size": size["slug"],
+        "image": snapshot["id"],
+    }
+
+    # Without an SSH key, DigitalOcean generates a random root password and
+    # emails it instead of granting key-based access.
+    ssh_key_name = os.environ.get("DO_SSH_KEY_NAME")
+    if ssh_key_name:
+        payload["ssh_keys"] = [_get_ssh_key_id(ssh_key_name)]
+
+    r = requests.post(f"{_BASE}/droplets", headers=_headers(), json=payload)
     _raise_for_status(r)
     return r.json()["droplet"]
 

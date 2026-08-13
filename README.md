@@ -42,6 +42,7 @@ All configuration is via environment variables (or a `.env` file).
 | `DO_RESERVED_IP` | Yes | The reserved IP address to assign to the droplet |
 | `DO_DROPLET_NAME` | No | Name used for both the droplet and snapshot (default: `pew-pew`) |
 | `DROPLET_LIFETIME_HOURS` | No | How many hours the droplet runs before auto-shutdown (default: `6`) |
+| `DO_SSH_KEY_NAME` | No | Name of an SSH key already on your DigitalOcean account, attached to new droplets. Without it, DO generates and emails a random root password instead |
 | `SSH_PRIVATE_KEY_PATH` | Yes | Path to the private key authorised on your droplets |
 | `SSH_USERNAME` | No | SSH username (default: `root`) |
 | `SSH_PASSPHRASE` | No | Passphrase for the SSH private key, if encrypted |
