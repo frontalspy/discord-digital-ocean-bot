@@ -52,15 +52,7 @@ async def handle_start(ctx: discord.ApplicationContext, state: ServerState) -> N
             )
             active = await asyncio.to_thread(do.wait_for_droplet_active, droplet["id"])
 
-            public_ip = next(
-                (n["ip_address"] for n in active["networks"]["v4"] if n["type"] == "public"),
-                "unknown",
-            )
-
-            await ch.send(
-                f"🟢 Droplet active (internal IP: `{public_ip}`). "
-                f"Assigning reserved IP `{reserved_ip}`..."
-            )
+            await ch.send(f"🟢 Droplet active. Assigning reserved IP `{reserved_ip}`...")
             await asyncio.to_thread(do.assign_reserved_ip, active["id"], reserved_ip)
         except Exception as exc:
             await ch.send(f"❌ Start sequence failed: {exc}")
