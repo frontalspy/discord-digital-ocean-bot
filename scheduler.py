@@ -18,6 +18,19 @@ def get_lifetime_hours() -> int:
     return int(os.environ.get("DROPLET_LIFETIME_HOURS", "6"))
 
 
+async def _resolve_notify_channel(bot: discord.Bot) -> Optional[discord.abc.Messageable]:
+    saved = persistence.load_state()
+    if not saved:
+        return None
+    channel = bot.get_channel(saved["channel_id"])
+    if channel is not None:
+        return channel
+    try:
+        return await bot.fetch_channel(saved["channel_id"])
+    except discord.DiscordException:
+        return None
+
+
 async def schedule_shutdown(
     state: ServerState,
     channel: discord.TextChannel,
@@ -47,7 +60,7 @@ async def _shutdown_after_delay(
         await run_shutdown_sequence(state, channel)
 
 
-async def run_shutdown_sequence(state: ServerState, channel: discord.TextChannel) -> None:
+async def run_shutdown_sequence(state: ServerState, channel: discord.abc.Messageable) -> None:
     reserved_ip = os.environ["DO_RESERVED_IP"]
     droplet_name = do.get_droplet_name()
     hours = get_lifetime_hours()
@@ -112,15 +125,7 @@ async def recover_state(state: ServerState, bot: discord.Bot) -> None:
         return
 
     saved = persistence.load_state()
-    channel: Optional[discord.abc.Messageable] = None
-    channel_id = saved["channel_id"] if saved else None
-    if channel_id:
-        channel = bot.get_channel(channel_id)
-        if channel is None:
-            try:
-                channel = await bot.fetch_channel(channel_id)
-            except discord.DiscordException:
-                channel = None
+    channel = await _resolve_notify_channel(bot)
 
     if channel is None:
         print(

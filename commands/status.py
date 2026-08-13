@@ -17,8 +17,16 @@ async def handle_status(ctx: discord.ApplicationContext, state: ServerState) -> 
     droplet_name = do.get_droplet_name()
 
     if not droplet:
-        await ctx.respond(f"🔴 Server is **offline**. No `{droplet_name}` droplet is running.")
+        await ctx.respond(f"🔴 Server is **offline**. No `{droplet_name}` droplet exists.")
         return
+
+    power_status = droplet["status"]
+    if power_status == "active":
+        header = "🟢 Server is **on**"
+    elif power_status == "off":
+        header = "🟡 Droplet exists but is **powered off**"
+    else:
+        header = f"🟠 Droplet exists in state `{power_status}`"
 
     now = datetime.now()
     uptime = _fmt(now - state.started_at) if state.started_at else "unknown"
@@ -28,9 +36,9 @@ async def handle_status(ctx: discord.ApplicationContext, state: ServerState) -> 
     )
 
     await ctx.respond(
-        "🟢 Server is **online**\n"
+        f"{header}\n"
         f"• Droplet ID: `{droplet['id']}`\n"
-        f"• Status: `{droplet['status']}`\n"
+        f"• Status: `{power_status}`\n"
         f"• Reserved IP: `{reserved_ip}`\n"
         f"• Uptime: `{uptime}`\n"
         f"• Auto-shutdown in: `{shutdown_in}`\n"

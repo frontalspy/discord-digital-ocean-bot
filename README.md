@@ -7,7 +7,7 @@ A Discord bot that spins up a DigitalOcean game server on demand, runs setup com
 1. `/server start` — creates a droplet from your snapshot using the cheapest available size, assigns a reserved IP, and runs your startup commands over SSH.
 2. After the configured lifetime (default **6 hours**) the bot powers off the droplet, creates a fresh snapshot (replacing the old one), releases the reserved IP, and destroys the droplet.
 3. `/server stop` — triggers the same shutdown sequence immediately.
-4. `/server status` — shows uptime and time until auto-shutdown.
+4. `/server status` — queries DigitalOcean directly and reports whether the droplet exists and its actual power state (on / off / other), plus uptime and time until auto-shutdown.
 
 Only one droplet can run at a time. The reserved IP is never deleted — it persists between sessions.
 
@@ -53,15 +53,16 @@ All configuration is via environment variables (or a `.env` file).
 |---|---|
 | `/server start` | Boot the server from snapshot |
 | `/server stop` | Snapshot, release IP, and destroy the droplet |
-| `/server status` | Show current status and time until auto-shutdown |
+| `/server status` | Query DigitalOcean for the droplet's live on/off state |
 
 ## Project structure
 
 ```
 main.py           — entry point
 bot.py            — Discord bot and slash command registration
-scheduler.py      — 6-hour auto-shutdown logic
-state.py          — in-memory server state
+scheduler.py      — auto-shutdown timer and restart recovery
+state.py          — in-memory server state (droplet id, timers, lock)
+persistence.py    — writes/reads server_state.json so a restart can recover
 commands/
   start.py
   stop.py
