@@ -81,7 +81,7 @@ def create_droplet_from_snapshot(snapshot: dict) -> dict:
     return r.json()["droplet"]
 
 
-def wait_for_droplet_active(droplet_id: int, timeout: int = 300) -> dict:
+def wait_for_droplet_active(droplet_id: int, timeout: int = 600) -> dict:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = requests.get(f"{_BASE}/droplets/{droplet_id}", headers=_headers())
@@ -89,7 +89,7 @@ def wait_for_droplet_active(droplet_id: int, timeout: int = 300) -> dict:
         droplet = r.json()["droplet"]
         if droplet["status"] == "active":
             return droplet
-        time.sleep(5)
+        time.sleep(30)
     raise TimeoutError(f"Droplet {droplet_id} did not become active within {timeout}s")
 
 

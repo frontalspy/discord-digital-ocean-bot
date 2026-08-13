@@ -80,27 +80,33 @@ async def handle_start(ctx: discord.ApplicationContext, state: ServerState) -> N
             f"**{hours} hour{'s' if hours != 1 else ''}** from now. Running startup commands..."
         )
 
+        output_lines: list[str] = []
         try:
-            output_lines: list[str] = []
             await asyncio.to_thread(run_startup_commands, reserved_ip, output_lines.append)
-
-            if output_lines:
-                # Send output in ≤1900-char chunks to stay within Discord's limit
-                chunk: list[str] = []
-                length = 0
-                for line in output_lines:
-                    if length + len(line) + 1 > 1900:
-                        await ch.send(f"```\n{chr(10).join(chunk)}\n```")
-                        chunk, length = [], 0
-                    chunk.append(line)
-                    length += len(line) + 1
-                if chunk:
-                    await ch.send(f"```\n{chr(10).join(chunk)}\n```")
-
+            await _send_chunked(ch, output_lines)
             await ch.send(f"✅ Server is live at `{reserved_ip}` and ready.")
         except Exception as exc:
+            # Post whatever output was captured before the failure — it
+            # usually explains *why* the command failed, not just that it did.
+            await _send_chunked(ch, output_lines)
             await ch.send(
                 f"⚠️ Startup commands failed: {exc}\n"
                 "The droplet is still running and will still auto-shutdown/snapshot as "
                 "scheduled — you may need to finish setup manually."
             )
+
+
+async def _send_chunked(ch: discord.abc.Messageable, lines: list[str]) -> None:
+    """Send captured command output in <=1900-char code-block chunks."""
+    if not lines:
+        return
+    chunk: list[str] = []
+    length = 0
+    for line in lines:
+        if length + len(line) + 1 > 1900:
+            await ch.send(f"```\n{chr(10).join(chunk)}\n```")
+            chunk, length = [], 0
+        chunk.append(line)
+        length += len(line) + 1
+    if chunk:
+        await ch.send(f"```\n{chr(10).join(chunk)}\n```")
