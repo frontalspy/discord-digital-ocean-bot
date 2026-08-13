@@ -2,3 +2,6 @@ py-cord==2.6.1
 requests==2.32.3
 paramiko==3.5.0
 python-dotenv==1.0.1
+# audioop was removed from the stdlib in Python 3.13; py-cord still imports
+# it internally for voice support even though this bot doesn't use voice.
+audioop-lts; python_version >= "3.13"
