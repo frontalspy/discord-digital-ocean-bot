@@ -12,6 +12,13 @@ from state import ServerState
 async def handle_stop(ctx: discord.ApplicationContext, state: ServerState) -> None:
     droplet_name = do.get_droplet_name()
 
+    if state.lock.locked():
+        await ctx.respond(
+            "⚠️ Another start/stop request is already in progress — try again once it finishes.",
+            ephemeral=True,
+        )
+        return
+
     # Ack the interaction immediately — the lock below may be held for
     # minutes by a concurrent start/stop/auto-shutdown.
     await ctx.respond(f"🔍 Checking status of **{droplet_name}**...")

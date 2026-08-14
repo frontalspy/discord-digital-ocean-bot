@@ -63,10 +63,6 @@ async def _shutdown_after_delay(
 async def run_shutdown_sequence(state: ServerState, channel: discord.abc.Messageable) -> None:
     reserved_ip = os.environ["DO_RESERVED_IP"]
     droplet_name = do.get_droplet_name()
-    hours = get_lifetime_hours()
-    await channel.send(
-        f"⏰ {hours} hour{'s' if hours != 1 else ''} elapsed — starting shutdown sequence..."
-    )
 
     try:
         droplet = await asyncio.to_thread(do.get_droplet)
@@ -78,21 +74,17 @@ async def run_shutdown_sequence(state: ServerState, channel: discord.abc.Message
         droplet_id = droplet["id"]
         old_snapshot = await asyncio.to_thread(do.get_snapshot)
 
-        await channel.send("🔴 Powering off droplet...")
         await asyncio.to_thread(do.power_off_droplet, droplet_id)
         await asyncio.to_thread(do.wait_for_droplet_off, droplet_id)
 
-        await channel.send(f"📸 Creating new snapshot `{droplet_name}`...")
+        # New snapshot must succeed before the old one is deleted, so a
+        # failed/partial snapshot never leaves us with no backup at all.
         await asyncio.to_thread(do.create_snapshot, droplet_id, droplet_name)
 
         if old_snapshot:
-            await channel.send(f"🗑️ Deleting old snapshot `{old_snapshot['id']}`...")
             await asyncio.to_thread(do.delete_snapshot, old_snapshot["id"])
 
-        await channel.send("🔌 Unassigning reserved IP...")
         await asyncio.to_thread(do.unassign_reserved_ip, reserved_ip)
-
-        await channel.send("💣 Destroying droplet...")
         await asyncio.to_thread(do.destroy_droplet, droplet_id)
 
         _reset(state)

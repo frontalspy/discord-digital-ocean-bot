@@ -8,6 +8,11 @@ import requests
 
 _BASE = "https://api.digitalocean.com/v2"
 
+# requests has no default timeout — without one, a stalled DO API call or
+# network blip blocks forever. Every call in this module runs inside
+# state.lock, so a single hung request would wedge every future command.
+_HTTP_TIMEOUT = 30
+
 
 def get_droplet_name() -> str:
     return os.environ.get("DO_DROPLET_NAME", "pew-pew")
@@ -33,21 +38,25 @@ def _headers() -> dict:
 
 
 def get_droplet() -> Optional[dict]:
-    r = requests.get(f"{_BASE}/droplets?per_page=200", headers=_headers())
+    r = requests.get(
+        f"{_BASE}/droplets?per_page=200", headers=_headers(), timeout=_HTTP_TIMEOUT
+    )
     _raise_for_status(r)
     return next((d for d in r.json()["droplets"] if d["name"] == get_droplet_name()), None)
 
 
 def get_snapshot() -> Optional[dict]:
     r = requests.get(
-        f"{_BASE}/snapshots?resource_type=droplet&per_page=200", headers=_headers()
+        f"{_BASE}/snapshots?resource_type=droplet&per_page=200",
+        headers=_headers(),
+        timeout=_HTTP_TIMEOUT,
     )
     _raise_for_status(r)
     return next((s for s in r.json()["snapshots"] if s["name"] == get_droplet_name()), None)
 
 
 def _get_cheapest_size(region: str, min_disk_gb: int) -> dict:
-    r = requests.get(f"{_BASE}/sizes", headers=_headers())
+    r = requests.get(f"{_BASE}/sizes", headers=_headers(), timeout=_HTTP_TIMEOUT)
     _raise_for_status(r)
     sizes = [
         s
@@ -63,7 +72,9 @@ def _get_cheapest_size(region: str, min_disk_gb: int) -> dict:
 
 
 def _get_ssh_key_id(name: str) -> int:
-    r = requests.get(f"{_BASE}/account/keys?per_page=200", headers=_headers())
+    r = requests.get(
+        f"{_BASE}/account/keys?per_page=200", headers=_headers(), timeout=_HTTP_TIMEOUT
+    )
     _raise_for_status(r)
     for key in r.json()["ssh_keys"]:
         if key["name"] == name:
@@ -90,7 +101,9 @@ def create_droplet_from_snapshot(snapshot: dict) -> dict:
     if ssh_key_name:
         payload["ssh_keys"] = [_get_ssh_key_id(ssh_key_name)]
 
-    r = requests.post(f"{_BASE}/droplets", headers=_headers(), json=payload)
+    r = requests.post(
+        f"{_BASE}/droplets", headers=_headers(), json=payload, timeout=_HTTP_TIMEOUT
+    )
     _raise_for_status(r)
     return r.json()["droplet"]
 
@@ -98,7 +111,9 @@ def create_droplet_from_snapshot(snapshot: dict) -> dict:
 def wait_for_droplet_active(droplet_id: int, timeout: int = 600) -> dict:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        r = requests.get(f"{_BASE}/droplets/{droplet_id}", headers=_headers())
+        r = requests.get(
+            f"{_BASE}/droplets/{droplet_id}", headers=_headers(), timeout=_HTTP_TIMEOUT
+        )
         _raise_for_status(r)
         droplet = r.json()["droplet"]
         if droplet["status"] == "active":
@@ -112,6 +127,7 @@ def assign_reserved_ip(droplet_id: int, ip: str) -> None:
         f"{_BASE}/reserved_ips/{ip}/actions",
         headers=_headers(),
         json={"type": "assign", "droplet_id": droplet_id},
+        timeout=_HTTP_TIMEOUT,
     )
     _raise_for_status(r)
 
@@ -121,6 +137,7 @@ def unassign_reserved_ip(ip: str) -> None:
         f"{_BASE}/reserved_ips/{ip}/actions",
         headers=_headers(),
         json={"type": "unassign"},
+        timeout=_HTTP_TIMEOUT,
     )
     _raise_for_status(r)
 
@@ -130,6 +147,7 @@ def power_off_droplet(droplet_id: int) -> None:
         f"{_BASE}/droplets/{droplet_id}/actions",
         headers=_headers(),
         json={"type": "power_off"},
+        timeout=_HTTP_TIMEOUT,
     )
     _raise_for_status(r)
 
@@ -137,7 +155,9 @@ def power_off_droplet(droplet_id: int) -> None:
 def wait_for_droplet_off(droplet_id: int, timeout: int = 120) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        r = requests.get(f"{_BASE}/droplets/{droplet_id}", headers=_headers())
+        r = requests.get(
+            f"{_BASE}/droplets/{droplet_id}", headers=_headers(), timeout=_HTTP_TIMEOUT
+        )
         _raise_for_status(r)
         if r.json()["droplet"]["status"] == "off":
             return
@@ -150,6 +170,7 @@ def create_snapshot(droplet_id: int, name: str) -> None:
         f"{_BASE}/droplets/{droplet_id}/actions",
         headers=_headers(),
         json={"type": "snapshot", "name": name},
+        timeout=_HTTP_TIMEOUT,
     )
     _raise_for_status(r)
     action_id = r.json()["action"]["id"]
@@ -160,7 +181,9 @@ def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 600) -> Non
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = requests.get(
-            f"{_BASE}/droplets/{droplet_id}/actions/{action_id}", headers=_headers()
+            f"{_BASE}/droplets/{droplet_id}/actions/{action_id}",
+            headers=_headers(),
+            timeout=_HTTP_TIMEOUT,
         )
         _raise_for_status(r)
         status = r.json()["action"]["status"]
@@ -173,10 +196,14 @@ def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 600) -> Non
 
 
 def delete_snapshot(snapshot_id: str) -> None:
-    r = requests.delete(f"{_BASE}/snapshots/{snapshot_id}", headers=_headers())
+    r = requests.delete(
+        f"{_BASE}/snapshots/{snapshot_id}", headers=_headers(), timeout=_HTTP_TIMEOUT
+    )
     _raise_for_status(r)
 
 
 def destroy_droplet(droplet_id: int) -> None:
-    r = requests.delete(f"{_BASE}/droplets/{droplet_id}", headers=_headers())
+    r = requests.delete(
+        f"{_BASE}/droplets/{droplet_id}", headers=_headers(), timeout=_HTTP_TIMEOUT
+    )
     _raise_for_status(r)

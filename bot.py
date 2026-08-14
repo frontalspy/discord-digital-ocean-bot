@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import traceback
 
 import discord
 
@@ -31,6 +32,29 @@ def create_bot() -> discord.Bot:
     @pewpew.command(name="status", description="Check whether the server is running")
     async def status(ctx: discord.ApplicationContext) -> None:
         await handle_status(ctx, state)
+
+    @bot.event
+    async def on_application_command_error(
+        ctx: discord.ApplicationContext, error: discord.DiscordException
+    ) -> None:
+        # Any exception a command handler didn't already catch lands here —
+        # log the full traceback for us, but don't leave the user staring at
+        # a dead interaction.
+        original = getattr(error, "original", error)
+        traceback.print_exception(type(original), original, original.__traceback__)
+
+        if isinstance(original, discord.Forbidden):
+            message = "❌ I don't have permission to post in this channel — check my role/channel permissions."
+        else:
+            message = f"❌ Something went wrong: {original}"
+
+        try:
+            if ctx.interaction.response.is_done():
+                await ctx.followup.send(message, ephemeral=True)
+            else:
+                await ctx.respond(message, ephemeral=True)
+        except discord.DiscordException:
+            pass  # can't reach this channel/interaction at all — already logged above
 
     recovered = False
 

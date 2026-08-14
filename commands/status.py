@@ -23,6 +23,8 @@ async def handle_status(ctx: discord.ApplicationContext, state: ServerState) -> 
     power_status = droplet["status"]
     if power_status == "active":
         header = "🟢 Server is **on**"
+    elif power_status == "new":
+        header = "⏳ Droplet is still being **created** — not active yet"
     elif power_status == "off":
         header = "🟡 Droplet exists but is **powered off**"
     else:
