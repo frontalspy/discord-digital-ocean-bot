@@ -174,10 +174,10 @@ def create_snapshot(droplet_id: int, name: str) -> None:
     )
     _raise_for_status(r)
     action_id = r.json()["action"]["id"]
-    _wait_for_action(droplet_id, action_id, timeout=600)
+    _wait_for_action(droplet_id, action_id, timeout=900)
 
 
-def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 600) -> None:
+def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 900) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = requests.get(
@@ -191,7 +191,7 @@ def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 600) -> Non
             return
         if status == "errored":
             raise RuntimeError(f"DO action {action_id} errored")
-        time.sleep(10)
+        time.sleep(30)
     raise TimeoutError(f"DO action {action_id} did not complete within {timeout}s")
 
 
