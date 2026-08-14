@@ -5,6 +5,7 @@ import traceback
 
 import discord
 
+from commands.run_startup import handle_run_startup
 from commands.start import handle_start
 from commands.status import handle_status
 from commands.stop import handle_stop
@@ -32,6 +33,13 @@ def create_bot() -> discord.Bot:
     @pewpew.command(name="status", description="Check whether the server is running")
     async def status(ctx: discord.ApplicationContext) -> None:
         await handle_status(ctx, state)
+
+    @pewpew.command(
+        name="run-startup",
+        description="Re-run the startup commands against the already-running droplet",
+    )
+    async def run_startup(ctx: discord.ApplicationContext) -> None:
+        await handle_run_startup(ctx, state)
 
     @bot.event
     async def on_application_command_error(

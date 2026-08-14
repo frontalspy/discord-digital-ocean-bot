@@ -7,6 +7,7 @@ from datetime import datetime
 import discord
 
 import persistence
+from discord_utils import send_chunked
 from scheduler import get_lifetime_hours, schedule_shutdown
 from services import digitalocean as do
 from services.ssh import run_startup_commands
@@ -82,30 +83,14 @@ async def handle_start(ctx: discord.ApplicationContext, state: ServerState) -> N
         output_lines: list[str] = []
         try:
             await asyncio.to_thread(run_startup_commands, reserved_ip, output_lines.append)
-            await _send_chunked(ch, output_lines)
+            await send_chunked(ch, output_lines)
             await ch.send(f"✅ Server is live at `{reserved_ip}` and ready.")
         except Exception as exc:
             # Post whatever output was captured before the failure — it
             # usually explains *why* the command failed, not just that it did.
-            await _send_chunked(ch, output_lines)
+            await send_chunked(ch, output_lines)
             await ch.send(
                 f"⚠️ Startup commands failed: {exc}\n"
                 "The droplet is still running and will still auto-shutdown/snapshot as "
                 "scheduled — you may need to finish setup manually."
             )
-
-
-async def _send_chunked(ch: discord.abc.Messageable, lines: list[str]) -> None:
-    """Send captured command output in <=1900-char code-block chunks."""
-    if not lines:
-        return
-    chunk: list[str] = []
-    length = 0
-    for line in lines:
-        if length + len(line) + 1 > 1900:
-            await ch.send(f"```\n{chr(10).join(chunk)}\n```")
-            chunk, length = [], 0
-        chunk.append(line)
-        length += len(line) + 1
-    if chunk:
-        await ch.send(f"```\n{chr(10).join(chunk)}\n```")
