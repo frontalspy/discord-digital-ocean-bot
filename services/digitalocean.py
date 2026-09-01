@@ -55,18 +55,37 @@ def get_snapshot() -> Optional[dict]:
     return next((s for s in r.json()["snapshots"] if s["name"] == get_droplet_name()), None)
 
 
+def _get_cpu_vendor() -> str:
+    """'amd', 'intel', or 'any' — see DO_CPU_VENDOR in .env.example."""
+    return os.environ.get("DO_CPU_VENDOR", "amd").strip().lower()
+
+
+def _matches_cpu_vendor(slug: str, vendor: str) -> bool:
+    # DigitalOcean encodes CPU vendor in the size slug itself: Premium AMD
+    # sizes end in "-amd", Premium Intel end in "-intel". Plain/regular
+    # slugs (no suffix) don't guarantee either, so "any" accepts everything.
+    if vendor == "any":
+        return True
+    return slug.endswith(f"-{vendor}")
+
+
 def _get_cheapest_size(region: str, min_disk_gb: int) -> dict:
+    vendor = _get_cpu_vendor()
     r = requests.get(f"{_BASE}/sizes", headers=_headers(), timeout=_HTTP_TIMEOUT)
     _raise_for_status(r)
     sizes = [
         s
         for s in r.json()["sizes"]
-        if s["available"] and region in s.get("regions", []) and s["disk"] >= min_disk_gb
+        if s["available"]
+        and region in s.get("regions", [])
+        and s["disk"] >= min_disk_gb
+        and _matches_cpu_vendor(s["slug"], vendor)
     ]
     if not sizes:
+        vendor_note = f" on {vendor.upper()}" if vendor != "any" else ""
         raise RuntimeError(
             f"No available droplet sizes in region {region!r} with at least "
-            f"{min_disk_gb}GB disk (required to restore this snapshot)"
+            f"{min_disk_gb}GB disk{vendor_note} (required to restore this snapshot)"
         )
     return min(sizes, key=lambda s: s["price_monthly"])
 

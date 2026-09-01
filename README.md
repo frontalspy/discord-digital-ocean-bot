@@ -43,6 +43,7 @@ All configuration is via environment variables (or a `.env` file).
 | `DO_DROPLET_NAME` | No | Name used for both the droplet and snapshot (default: `pew-pew`) |
 | `DROPLET_LIFETIME_HOURS` | No | How many hours the droplet runs before auto-shutdown (default: `6`) |
 | `DO_SSH_KEY_NAME` | No | Name of an SSH key already on your DigitalOcean account, attached to new droplets. Without it, DO generates and emails a random root password instead |
+| `DO_CPU_VENDOR` | No | CPU vendor for the auto-selected size: `amd`, `intel`, or `any` (default: `amd`) |
 | `SSH_PRIVATE_KEY_PATH` | Yes | Path to the private key authorised on your droplets |
 | `SSH_USERNAME` | No | SSH username (default: `root`) |
 | `SSH_PASSPHRASE` | No | Passphrase for the SSH private key, if encrypted |
@@ -55,6 +56,7 @@ All configuration is via environment variables (or a `.env` file).
 | `/server start` | Boot the server from snapshot |
 | `/server stop` | Snapshot, release IP, and destroy the droplet |
 | `/server status` | Query DigitalOcean for the droplet's live on/off state |
+| `/server run-startup` | Re-run the SSH startup commands against the already-running droplet, without recreating it |
 
 ## Project structure
 
@@ -64,10 +66,12 @@ bot.py            — Discord bot and slash command registration
 scheduler.py      — auto-shutdown timer and restart recovery
 state.py          — in-memory server state (droplet id, timers, lock)
 persistence.py    — writes/reads server_state.json so a restart can recover
+discord_utils.py  — shared Discord helpers (chunked message sending)
 commands/
   start.py
   stop.py
   status.py
+  run_startup.py
 services/
   digitalocean.py — DigitalOcean API wrapper
   ssh.py          — SSH command runner
