@@ -71,7 +71,9 @@ def _matches_cpu_vendor(slug: str, vendor: str) -> bool:
 
 def _get_cheapest_size(region: str, min_disk_gb: int) -> dict:
     vendor = _get_cpu_vendor()
-    r = requests.get(f"{_BASE}/sizes", headers=_headers(), timeout=_HTTP_TIMEOUT)
+    r = requests.get(
+        f"{_BASE}/sizes?per_page=200", headers=_headers(), timeout=_HTTP_TIMEOUT
+    )
     _raise_for_status(r)
     sizes = [
         s
