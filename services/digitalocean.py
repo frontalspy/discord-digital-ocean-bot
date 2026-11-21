@@ -195,10 +195,10 @@ def create_snapshot(droplet_id: int, name: str) -> None:
     )
     _raise_for_status(r)
     action_id = r.json()["action"]["id"]
-    _wait_for_action(droplet_id, action_id, timeout=900)
+    _wait_for_action(droplet_id, action_id)
 
 
-def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 900) -> None:
+def _wait_for_action(droplet_id: int, action_id: int, timeout: int = 15000) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = requests.get(

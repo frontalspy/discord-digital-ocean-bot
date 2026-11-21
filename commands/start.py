@@ -83,7 +83,6 @@ async def handle_start(ctx: discord.ApplicationContext, state: ServerState) -> N
         output_lines: list[str] = []
         try:
             await asyncio.to_thread(run_startup_commands, reserved_ip, output_lines.append)
-            await send_chunked(ch, output_lines)
             await ch.send(f"✅ Server is live at `{reserved_ip}` and ready.")
         except Exception as exc:
             # Post whatever output was captured before the failure — it

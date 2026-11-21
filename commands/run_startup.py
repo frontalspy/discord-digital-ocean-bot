@@ -46,7 +46,6 @@ async def handle_run_startup(ctx: discord.ApplicationContext, state: ServerState
         output_lines: list[str] = []
         try:
             await asyncio.to_thread(run_startup_commands, reserved_ip, output_lines.append)
-            await send_chunked(ch, output_lines)
             await ch.send("✅ Startup commands completed successfully.")
         except Exception as exc:
             await send_chunked(ch, output_lines)
