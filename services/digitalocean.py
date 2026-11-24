@@ -173,7 +173,7 @@ def power_off_droplet(droplet_id: int) -> None:
     _raise_for_status(r)
 
 
-def wait_for_droplet_off(droplet_id: int, timeout: int = 120) -> None:
+def wait_for_droplet_off(droplet_id: int, timeout: int = 300) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         r = requests.get(
